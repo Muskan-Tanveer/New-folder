@@ -1,4 +1,4 @@
-import { Destinations } from "@/lib/destinations";
+import { Destinations } from "../../../lib/destinations";
 import { notFound } from "next/navigation";
 import { Clock, Navigation, Star, CheckCircle } from "lucide-react";
 import Link from "next/link";
