@@ -1,4 +1,4 @@
-import { Destinations } from "../../../lib/destinations";
+import { Destinations } from "@/lib/destinations";
 import { notFound } from "next/navigation";
 import { Clock, Navigation, Star, CheckCircle } from "lucide-react";
 import Link from "next/link";
@@ -7,7 +7,6 @@ import DestinationCard from "@/components/DestinationCard";
 interface Props {
   params: { id: string };
 }
-
 export default function DestinationDetailPage({ params }: Props) {
   const destination = Destinations.find((d) => d.id === params.id);
 

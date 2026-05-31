@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { Destinations } from "../../lib/destinations";
+import { Destinations } from "@/lib/destinations";
 import DestinationCard from "@/components/DestinationCard";
 import { Search } from "lucide-react";
 
