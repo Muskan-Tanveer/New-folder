@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { MapPin, Github, Youtube } from "lucide-react";
+import { MapPin} from "lucide-react";
 
 export default function Footer() {
   return (
@@ -44,10 +44,7 @@ export default function Footer() {
             <p className="text-gray-400 text-sm">
               Built with Next.js, TypeScript, Tailwind CSS &amp; Claude Code
             </p>
-            <div className="flex space-x-4 mt-4">
-              <Github className="h-5 w-5 text-gray-400 hover:text-white cursor-pointer" />
-              <Youtube className="h-5 w-5 text-gray-400 hover:text-white cursor-pointer" />
-            </div>
+        
           </div>
         </div>
 

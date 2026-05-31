@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { destinations } from "@/lib/destinations";
+import { Destinations } from "@/lib/destinations";
 import DestinationCard from "@/components/DestinationCard";
 import { Search } from "lucide-react";
 
@@ -10,7 +10,7 @@ export default function DestinationsPage() {
   const [search, setSearch] = useState("");
   const [selectedRegion, setSelectedRegion] = useState("All");
 
-  const filtered = destinations.filter((d) => {
+  const filtered = Destinations.filter((d) => {
     const matchSearch =
       d.title.toLowerCase().includes(search.toLowerCase()) ||
       d.shortDesc.toLowerCase().includes(search.toLowerCase());
@@ -24,7 +24,7 @@ export default function DestinationsPage() {
       <div className="bg-linear-to-r from-green-700 to-emerald-500 text-white py-16 text-center">
         <h1 className="text-4xl font-bold mb-4">All Destinations</h1>
         <p className="text-green-100 text-lg">
-          Explore {destinations.length} amazing places across Pakistan
+          Explore {Destinations.length} amazing places across Pakistan
         </p>
       </div>
 
