@@ -1,4 +1,4 @@
-import { Destinations } from "@/lib/destinations";
+import { destinations } from "@/library/destinations";
 import { notFound } from "next/navigation";
 import { Clock, Navigation, Star, CheckCircle } from "lucide-react";
 import Link from "next/link";
@@ -8,11 +8,11 @@ interface Props {
   params: { id: string };
 }
 export default function DestinationDetailPage({ params }: Props) {
-  const destination = Destinations.find((d) => d.id === params.id);
+  const destination = destinations.find((d) => d.id === params.id);
 
   if (!destination) notFound();
 
-  const related = Destinations
+  const related = destinations
     .filter((d) => d.id !== destination.id && d.region === destination.region)
     .slice(0, 3);
 

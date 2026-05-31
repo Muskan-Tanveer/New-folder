@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Destinations } from "@/lib/destinations";
+import { Destinations } from "@/library/destinations";
 import DestinationCard from "@/components/DestinationCard";
 import { ArrowRight, MapPin, Users, Star } from "lucide-react";
 

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { MapPin, Star, Clock } from "lucide-react";
-import { Destination } from "@/lib/destinations";
+import { Destination } from "@/library/destinations";
 
 interface Props {
   destination: Destination;
