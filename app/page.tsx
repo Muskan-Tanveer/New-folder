@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { Destinations } from "@/library/destinations";
+import { destinations } from "@/library/destinations";
 import DestinationCard from "@/components/DestinationCard";
 import { ArrowRight, MapPin, Users, Star } from "lucide-react";
 
 export default function HomePage() {
-  const featured = Destinations.slice(0, 6);
+  const featured = destinations.slice(0, 6);
 
   return (
     <div>
