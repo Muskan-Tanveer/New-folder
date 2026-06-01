@@ -22,7 +22,7 @@ export const destinations: Destination[] = [
     bestTime: "March to October",
     howToReach: "Fly to Gilgit from Islamabad, then drive 2 hours to Hunza",
     highlights: ["Baltit Fort", "Attabad Lake", "Rakaposhi View", "Hunza Apricots"],
-    image: "public\\images\s\hunza.jpg",
+    image: "/images/hunza.jpg",
     rating: 4.9,
   },
   {

@@ -1,6 +1,7 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
-import { MessageCircle, X, Send, Bot, User } from "lucide-react";
+import { MessageCircle, X, Send, Bot } from "lucide-react";
+import { getApiBaseUrl } from "@/library/api";
 
 interface Message {
   role: "user" | "assistant";
@@ -17,6 +18,7 @@ export default function ChatWidget() {
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [sessionId, setSessionId] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -24,7 +26,7 @@ export default function ChatWidget() {
   }, [messages]);
 
   const sendMessage = async () => {
-    if (!input.trim()) return;
+    if (!input.trim() || loading) return;
 
     const userMessage = input.trim();
     setInput("");
@@ -32,23 +34,43 @@ export default function ChatWidget() {
     setLoading(true);
 
     try {
-      const response = await fetch("http://localhost:8000/chat", {
+      const response = await fetch(`${getApiBaseUrl()}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: userMessage }),
+        body: JSON.stringify({
+          message: userMessage,
+          session_id: sessionId,
+        }),
       });
 
       const data = await response.json();
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: data.response },
-      ]);
-    } catch (error) {
+
+      if (!response.ok) {
+        const detail =
+          typeof data.detail === "string"
+            ? data.detail
+            : "The server could not process your message.";
+        throw new Error(detail);
+      }
+
+      if (data.session_id) {
+        setSessionId(data.session_id);
+      }
+
       setMessages((prev) => [
         ...prev,
         {
           role: "assistant",
-          content: "Sorry, the chatbot is currently unavailable. Please try again later.",
+          content: data.response ?? "No response from the travel guide.",
+        },
+      ]);
+    } catch {
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content:
+            "Sorry, the chatbot is currently unavailable. Check that the backend is running and NEXT_PUBLIC_API_URL is set on Vercel.",
         },
       ]);
     } finally {
