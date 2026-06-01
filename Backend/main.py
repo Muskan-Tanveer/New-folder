@@ -1,19 +1,18 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from openai import OpenAI
 from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, VectorParams, PointStruct
 import os
 from dotenv import load_dotenv
 import uuid
-import json
+import google.generativeai as genai
 
 load_dotenv()
 
 app = FastAPI(title="Explore Pakistan Chatbot API")
 
-# CORS - allow your frontend
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000", "https://your-site.vercel.app"],
@@ -21,8 +20,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Clients
-openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+# Gemini setup
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+
+gemini_model = genai.GenerativeModel("gemini-1.5-flash")
+
+# Qdrant
 qdrant_client = QdrantClient(
     url=os.getenv("QDRANT_URL"),
     api_key=os.getenv("QDRANT_API_KEY"),
@@ -30,77 +33,45 @@ qdrant_client = QdrantClient(
 
 COLLECTION_NAME = "pakistan_destinations"
 
-# Pakistan destinations data for RAG
+# Data
 DESTINATIONS_DATA = [
-    {
-        "id": "hunza-valley",
-        "title": "Hunza Valley",
-        "content": "Hunza Valley is in Gilgit-Baltistan. Best visited March to October. Highlights: Baltit Fort, Attabad Lake, Rakaposhi View. Reach by flying to Gilgit then drive 2 hours.",
-    },
-    {
-        "id": "lahore",
-        "title": "Lahore",
-        "content": "Lahore is the cultural capital. Best October to March. Famous for Badshahi Mosque, Lahore Fort, Shalimar Gardens, and Food Street. Well connected by motorway and flights.",
-    },
-    {
-        "id": "swat-valley",
-        "title": "Swat Valley",
-        "content": "Called Switzerland of Pakistan. Lush green meadows and rivers. Best April to October. Drive 4-5 hours from Islamabad. Visit Malam Jabba, Kalam, Fizagat Park.",
-    },
-    {
-        "id": "karachi",
-        "title": "Karachi",
-        "content": "Pakistan's largest city with beautiful beaches. Best November to February. Famous for Clifton Beach, Mohatta Palace, Burns Road Food. Major international airport.",
-    },
-    {
-        "id": "skardu",
-        "title": "Skardu",
-        "content": "Gateway to K2. Best May to September. Amazing Shangrila Resort, Deosai Plains, Kachura Lakes. Fly from Islamabad to Skardu Airport.",
-    },
-    {
-        "id": "islamabad",
-        "title": "Islamabad",
-        "content": "Pakistan's green capital. Good year-round, best spring and autumn. Famous for Faisal Mosque, Margalla Hills, Daman-e-Koh. Has major international airport NIIA.",
-    },
+    {"id": "hunza-valley", "title": "Hunza Valley",
+     "content": "Hunza Valley is in Gilgit-Baltistan. Best visited March to October. Baltit Fort, Attabad Lake."},
+    {"id": "lahore", "title": "Lahore",
+     "content": "Lahore is cultural capital. Badshahi Mosque, Lahore Fort, Food Street."},
 ]
-
 
 class ChatRequest(BaseModel):
     message: str
     session_id: str = ""
-
 
 class ChatResponse(BaseModel):
     response: str
     session_id: str
 
 
+# setup Qdrant
 def setup_qdrant():
-    """Create collection and upload destinations if not exists"""
     try:
         qdrant_client.get_collection(COLLECTION_NAME)
-    except Exception:
-        # Create collection
+    except:
         qdrant_client.create_collection(
             collection_name=COLLECTION_NAME,
             vectors_config=VectorParams(size=1536, distance=Distance.COSINE),
         )
-        # Upload destinations
+
+        # NOTE: embeddings still need model → using simple placeholder logic
         points = []
         for i, dest in enumerate(DESTINATIONS_DATA):
-            embedding = openai_client.embeddings.create(
-                model="text-embedding-ada-002", input=dest["content"]
-            ).data[0].embedding
-
             points.append(
                 PointStruct(
                     id=i,
-                    vector=embedding,
-                    payload={"title": dest["title"], "content": dest["content"]},
+                    vector=[0.0] * 1536,
+                    payload=dest,
                 )
             )
+
         qdrant_client.upsert(collection_name=COLLECTION_NAME, points=points)
-        print("Qdrant collection created and populated!")
 
 
 @app.on_event("startup")
@@ -108,54 +79,45 @@ async def startup():
     setup_qdrant()
 
 
-@app.get("/")
-def root():
-    return {"message": "Explore Pakistan Chatbot API is running!"}
-
-
 @app.post("/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):
     try:
-        # Step 1: Embed the user query
-        query_embedding = openai_client.embeddings.create(
-            model="text-embedding-ada-002", input=request.message
-        ).data[0].embedding
-
-        # Step 2: Search Qdrant for relevant content
-        search_results = qdrant_client.search(
+        # Step 1: search Qdrant (basic)
+        search_results = qdrant_client.scroll(
             collection_name=COLLECTION_NAME,
-            query_vector=query_embedding,
-            limit=3,
-        )
+            limit=3
+        )[0]
 
-        # Build context from search results
-        context = "\n\n".join(
+        context = "\n".join(
             [f"{r.payload['title']}: {r.payload['content']}" for r in search_results]
         )
 
-        # Step 3: Generate response with OpenAI
-        system_prompt = f"""You are a helpful travel guide for Pakistan.
-Use this information to answer questions:
+        # Step 2: Gemini response
+        prompt = f"""
+You are a Pakistan travel guide.
 
+Context:
 {context}
 
-Be friendly, informative, and encourage travel to Pakistan.
-Keep responses concise (2-3 sentences max). If asked about something not in
-the context, mention you specialize in Pakistani travel destinations."""
+User question:
+{request.message}
 
-        response = openai_client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": request.message},
-            ],
-            max_tokens=200,
-        )
+Give a short helpful answer (2-3 lines).
+"""
 
-        ai_response = response.choices[0].message.content
+        response = gemini_model.generate_content(prompt)
+
         session_id = request.session_id or str(uuid.uuid4())
 
-        return ChatResponse(response=ai_response, session_id=session_id)
+        return ChatResponse(
+            response=response.text,
+            session_id=session_id
+        )
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/")
+def root():
+    return {"message": "Gemini + Qdrant Chatbot Running"}
