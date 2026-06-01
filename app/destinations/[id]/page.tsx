@@ -4,11 +4,21 @@ import { Clock, Navigation, Star, CheckCircle } from "lucide-react";
 import Link from "next/link";
 import DestinationCard from "@/components/DestinationCard";
 
-interface Props {
-  params: { id: string };
+// 1. Tell Vercel exactly what destination pages exist during deployment build time
+export async function generateStaticParams() {
+  return destinations.map((dest) => ({
+    id: dest.id,
+  }));
 }
-export default function DestinationDetailPage({ params }: Props) {
-  const destination = destinations.find((d) => d.id === params.id);
+
+interface Props {
+  params: Promise<{ id: string }>; // 2. Updated to a Promise for production compatibility
+}
+
+export default async function DestinationDetailPage({ params }: Props) {
+  // 3. Await the parameters before using them
+  const resolvedParams = await params;
+  const destination = destinations.find((d) => d.id === resolvedParams.id);
 
   if (!destination) notFound();
 
